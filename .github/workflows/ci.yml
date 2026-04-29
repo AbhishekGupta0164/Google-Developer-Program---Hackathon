@@ -1,0 +1,49 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  lint-and-validate:
+    name: 🔍 Lint & Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install flake8 pyflakes
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Lint Python files
+        run: |
+          flake8 backend/ main.py api/ \
+            --max-line-length=120 \
+            --ignore=E501,W503,E302,E303,E402 \
+            --statistics \
+            --exclude=venv,env,__pycache__
+        continue-on-error: true   # warn-only; don't block workflow
+
+      - name: Validate vercel.json
+        run: |
+          if [ -f vercel.json ]; then
+            python -c "import json; json.load(open('vercel.json')); print('vercel.json ✅ valid')"
+          else
+            echo "vercel.json not found"
+          fi
